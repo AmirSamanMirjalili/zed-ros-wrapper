@@ -1,0 +1,6 @@
+.git
+.gitignore
+DOCKER_SETUP.md
+README.md
+images/
+.vscode/ 

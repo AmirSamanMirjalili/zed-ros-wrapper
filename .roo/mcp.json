@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "brave-search": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "node_version=$(node -v | sed 's/v//'); major=$(echo $node_version | cut -d. -f1); if [ \"$major\" -lt 14 ]; then echo \"Node.js v14+ required for brave-search MCP server. Current: $(node -v)\" >&2; exit 1; fi; exec npx -y @modelcontextprotocol/server-brave-search"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "BSA91Pp6oNg_Dq8A46_AgVNkh57m1NL"
+      }
+    }
+  }
+}
