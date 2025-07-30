@@ -51,6 +51,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install NVIDIA video codec libraries to prevent runtime issues
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnvidia-decode-535 \
+    libnvidia-encode-535 \
+    || true && rm -rf /var/lib/apt/lists/*
+
 # 4. Create a non-root user to run the ZED SDK installer
 RUN useradd -m builder && \
     echo "builder:builder" | chpasswd && \
@@ -85,16 +91,22 @@ WORKDIR /catkin_ws
 RUN mkdir -p src
 COPY --chown=root:root . src/zed-ros-wrapper
 RUN git clone https://github.com/stereolabs/zed-ros-interfaces.git src/zed-ros-interfaces
-RUN . /opt/ros/noetic/setup.sh && catkin_make --only-pkg-with-deps zed_interfaces
-RUN /bin/bash -c "source /catkin_ws/devel/setup.bash && catkin_make -DCMAKE_BUILD_TYPE=Release -DZED_DIR=/usr/local/zed/cmake"
 
+# Initialize rosdep and install dependencies before building
 RUN . /opt/ros/noetic/setup.sh && \
     rosdep init && rosdep update && \
     rosdep install --from-paths src --ignore-src -r -y --os ubuntu:focal
 
+# Build the packages in the correct order
+RUN . /opt/ros/noetic/setup.sh && catkin_make --only-pkg-with-deps zed_interfaces
+RUN . /opt/ros/noetic/setup.sh && \
+    catkin_make -DCMAKE_BUILD_TYPE=Release -DZED_DIR=/usr/local/zed/cmake
+
+# Update library cache to ensure all libraries are properly linked
+RUN ldconfig
 
 # 7. Set up the entrypoint
 COPY ./docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["bash"] 
+CMD ["bash"]
