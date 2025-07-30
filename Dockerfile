@@ -46,7 +46,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     less \
     file \
     libblas-dev \
-    liblapack-dev     ros-noetic-xacro     libusb-1.0-0-dev &&     rm -rf /var/lib/apt/lists/*
+    liblapack-dev \
+    ros-noetic-xacro \
+    libusb-1.0-0-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # 4. Create a non-root user to run the ZED SDK installer
 RUN useradd -m builder && \
@@ -81,11 +84,14 @@ RUN ldconfig
 WORKDIR /catkin_ws
 RUN mkdir -p src
 COPY --chown=root:root . src/zed-ros-wrapper
+RUN git clone https://github.com/stereolabs/zed-ros-interfaces.git src/zed-ros-interfaces
+RUN . /opt/ros/noetic/setup.sh && catkin_make --only-pkg-with-deps zed_interfaces
+RUN /bin/bash -c "source /catkin_ws/devel/setup.bash && catkin_make -DCMAKE_BUILD_TYPE=Release -DZED_DIR=/usr/local/zed/cmake"
+
 RUN . /opt/ros/noetic/setup.sh && \
     rosdep init && rosdep update && \
     rosdep install --from-paths src --ignore-src -r -y --os ubuntu:focal
-RUN . /opt/ros/noetic/setup.sh && \
-    catkin_make -DCMAKE_BUILD_TYPE=Release -DZED_DIR=/usr/local/zed/cmake
+
 
 # 7. Set up the entrypoint
 COPY ./docker-entrypoint.sh /
